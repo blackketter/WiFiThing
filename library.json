@@ -1,0 +1,18 @@
+{
+"name": "myWifi",
+"frameworks": "Arduino",
+"keywords": "Serial, Console, Wifi",
+"description": "Simple framework setting up WiFi services on Arduino ESP8266 ",
+"url": "https://github.com/blackketter/myWifi",
+"authors":
+[
+{
+        "name": "Dean Blackketter"
+}
+],
+"repository":
+{
+    "type": "git",
+    "url": "https://github.com/blackketter/myWifi"
+}
+}

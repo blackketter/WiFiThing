@@ -34,15 +34,11 @@ void setupWifi(const char* hostname, int32_t timeZoneOffset) {
   setSyncProvider(&ntpSyncProvider);
   setSyncInterval(5);
 
-  // Port defaults to 8266
-  // ArduinoOTA.setPort(8266);
-
-  // Hostname defaults to esp8266-[ChipID]
-  // ArduinoOTA.setHostname("myesp8266");
-
   // No authentication by default
   // ArduinoOTA.setPassword((const char *)"123");
 
+  // Port defaults to 8266
+  ArduinoOTA.setPort(8266);
   ArduinoOTA.setHostname(getHostname());
 
   ArduinoOTA.onStart([]() {
@@ -66,12 +62,9 @@ void setupWifi(const char* hostname, int32_t timeZoneOffset) {
 }
 
 void loopWifi() {
-  timeClient.update();
 
   bool wasUp = networkUp;
   networkUp = WiFi.isConnected();
-
-  digitalWrite(BUILTIN_LED, !networkUp);  // false = LED on
 
   if (wasUp != networkUp) {
     WiFi.printDiag(Serial);
@@ -83,6 +76,7 @@ void loopWifi() {
   }
 
   ArduinoOTA.handle();
+  timeClient.update();
 }
 
 int32_t httpGet(const char* url) {
