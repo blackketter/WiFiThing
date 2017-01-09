@@ -1,4 +1,4 @@
-# myWiFi library
+# WiFiThing library
 
 Simple framework setting up WiFi services on Arduino ESP8266 
 

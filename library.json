@@ -1,9 +1,9 @@
 {
-"name": "myWifi",
+"name": "WiFiThing",
 "frameworks": "Arduino",
 "keywords": "Serial, Console, Wifi",
 "description": "Simple framework setting up WiFi services on Arduino ESP8266 ",
-"url": "https://github.com/blackketter/myWifi",
+"url": "https://github.com/blackketter/WiFiThing",
 "authors":
 [
 {
@@ -13,6 +13,6 @@
 "repository":
 {
     "type": "git",
-    "url": "https://github.com/blackketter/myWifi"
+    "url": "https://github.com/blackketter/WiFiThing"
 }
 }
