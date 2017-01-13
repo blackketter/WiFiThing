@@ -27,7 +27,8 @@ bool networkUp = false;
 
 class InfoCommand : public Command {
   public:
-    InfoCommand() { setName("info"); setHelp("Print System Info"); }
+    const char* getName() { return "info"; }
+    const char* getHelp() { return "Print System Info"; }
     void execute(Stream* c, uint8_t paramCount, char** params) {
       c->println("----------------------------------");
       c->println("System Info:");
@@ -40,10 +41,13 @@ class InfoCommand : public Command {
       c->println("----------------------------------");
     }
 };
+InfoCommand theInfoCommand;
+
 
 class WiFiCommand : public Command {
   public:
-    WiFiCommand() { setName("wifi"); setHelp("Print WiFi Info"); }
+    const char* getName() { return "wifi"; }
+    const char* getHelp() { return "Print WiFi Info"; }
     void execute(Stream* c, uint8_t paramCount, char** params) {
       c->println("----------------------------------");
       c->println("WiFi Info");
@@ -51,9 +55,12 @@ class WiFiCommand : public Command {
       c->println("----------------------------------");
     }
 };
+WiFiCommand theWiFiCommand;
 
 void ntpUpdateCallback(NTPClient* n) {
-  ntpClock.setMillis(n->getEpochMillis());
+  uint64_t now = n->getEpochMillis();
+  ntpClock.setMillis(now);
+  console.debugf("time updated: %d.%03d\n", (uint32_t)(now/1000), (uint32_t)(now%1000));
 }
 
 void WiFiThing::setHostname(const char* hostname) {
@@ -65,8 +72,6 @@ void WiFiThing::setHostname(const char* hostname) {
 
 void WiFiThing::begin(const char* ssid, const char *passphrase) {
   console.begin();
-  console.addCommand(new InfoCommand());
-  console.addCommand(new WiFiCommand());
   console.debugln("Begining setupWifi()");
   console.debugf("MAC address: %s\n", getMacAddress().c_str());
 
