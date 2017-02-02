@@ -2,6 +2,7 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
 #include <ESP8266HTTPClient.h>
+#include <ESP8266WebServer.h>
 #else
 #include <WiFi.h>
 #include <mDNS.h>
@@ -12,6 +13,7 @@
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
 #include <Clock.h>
+
 
 #include "WiFiThing.h"
 
@@ -38,12 +40,27 @@ class InfoCommand : public Command {
       c->printf("  ip address:  %s\n", WiFi.localIP().toString().c_str());
       c->printf("  date:        %02d:%02d:%02d %04d-%02d-%02d\n", ntpClock.hour(), ntpClock.minute(), ntpClock.second(), ntpClock.year(), ntpClock.month(), ntpClock.day());
       c->printf("  uptime:      %d\n", millis()/1000);
+      c->printf("  free heap:   %d\n", ESP.getFreeHeap());
       c->println("----------------------------------");
     }
 };
 InfoCommand theInfoCommand;
 
+// reboot command
+class RebootCommand : public Command {
+  public:
+    const char* getName() { return "reboot"; }
+    const char* getHelp() { return "Reboot system"; }
+    void execute(Stream* c, uint8_t paramCount, char** params) {
+      c->println("Rebooting now...");
+      console.stop();
+      delay(1000);
+      ESP.restart();
+    }
+};
+RebootCommand theRebootCommand;
 
+// wifi diags command
 class WiFiCommand : public Command {
   public:
     const char* getName() { return "wifi"; }
@@ -57,10 +74,34 @@ class WiFiCommand : public Command {
 };
 WiFiCommand theWiFiCommand;
 
+// exit console command
+class ExitCommand : public Command {
+  public:
+    const char* getName() { return "exit"; }
+    const char* getHelp() { return "Close console connection"; }
+    void execute(Stream* c, uint8_t paramCount, char** params) {
+      c->println("Goodbye!");
+      console.stop();
+    }
+};
+ExitCommand theExitCommand;
+
+
 void ntpUpdateCallback(NTPClient* n) {
-  uint64_t now = n->getEpochMillis();
+  int64_t now = n->getEpochMillis();
+
+#if CALCULATE_DRIFT
+  static int32_t driftSum = 0;
+  static int32_t driftSamples = 0;
+  driftSamples++;
+  if (driftSamples > 1) {
+    int32_t delta = (long)(now - ntpClock.getMillis());
+    driftSum += delta;
+    console.debugf("time updated by %d millis, %dms drift in %d minutes\n", delta, driftSum, driftSamples );
+  }
+#endif
+
   ntpClock.setMillis(now);
-  console.debugf("time updated: %d.%03d\n", (uint32_t)(now/1000), (uint32_t)(now%1000));
 }
 
 void WiFiThing::setHostname(const char* hostname) {
@@ -111,6 +152,7 @@ void WiFiThing::begin(const char* ssid, const char *passphrase) {
     else if (error == OTA_END_ERROR) console.debugln("End Failed");
   });
   ArduinoOTA.begin();
+  beginServer();
 }
 
 void WiFiThing::loop() {
@@ -132,6 +174,7 @@ void WiFiThing::loop() {
     ArduinoOTA.handle();
     timeClient.update();
   }
+  server.handleClient();
 }
 
 int32_t WiFiThing::httpGet(const char* url) {
