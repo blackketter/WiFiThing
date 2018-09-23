@@ -1,6 +1,6 @@
 # WiFiThing library
 
-Simple framework setting up WiFi services on Arduino ESP8266 
+Simple framework setting up WiFi services on Arduino ESP8266 & ESP32
 
 Includes:
 
@@ -10,10 +10,10 @@ Includes:
 - Run NTP client (and drive system clock)
 - Notifications when wifi goes up and down
 - Simple HTTP getter
+- Debug console via Telnet
 
 To do:
 
-- Debug console via Telnet
 - Failsafe updates
 - SoftAP and Network config web server
 - Manage SSID and password in EEPROM/file system
