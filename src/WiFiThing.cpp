@@ -7,6 +7,7 @@
 #include <WiFi.h>
 #include <mDNS.h>
 #include <HTTPClient.h>
+#include <WebServer.h>
 #endif
 
 #include <NTPClient.h>
@@ -14,13 +15,13 @@
 #include <ArduinoOTA.h>
 #include <Clock.h>
 
-
 #include "WiFiThing.h"
 
 // By default 'time.nist.gov' is used with 60 seconds update interval and
 // no offset
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP);
+
 WiFiConsole console;
 
 Clock ntpClock;
@@ -39,7 +40,7 @@ class InfoCommand : public Command {
       c->printf("  mac address: %s\n", WiFi.macAddress().c_str());
       c->printf("  ip address:  %s\n", WiFi.localIP().toString().c_str());
       c->printf("  date:        %02d:%02d:%02d %04d-%02d-%02d\n", ntpClock.hour(), ntpClock.minute(), ntpClock.second(), ntpClock.year(), ntpClock.month(), ntpClock.day());
-      c->printf("  uptime:      %d\n", millis()/1000);
+      c->printf("  uptime:      %d\n", (int)(millis()/1000));
       c->printf("  free heap:   %d\n", ESP.getFreeHeap());
       c->println("----------------------------------");
     }
@@ -90,6 +91,10 @@ ExitCommand theExitCommand;
 void ntpUpdateCallback(NTPClient* n) {
   int64_t now = n->getEpochMillis();
 
+  Timezone* oldZone = ntpClock.getZone();
+
+  ntpClock.setZone(&UTC);
+
 #if CALCULATE_DRIFT
   static int32_t driftSum = 0;
   static int32_t driftSamples = 0;
@@ -102,11 +107,13 @@ void ntpUpdateCallback(NTPClient* n) {
 #endif
 
   ntpClock.setMillis(now);
+  ntpClock.setZone(oldZone);
 }
 
 void WiFiThing::setHostname(const char* hostname) {
   if (hostname) {
     ArduinoOTA.setHostname(hostname);
+    _hostname = hostname;
   }
   console.debugf("Hostname: %s\n", getHostname().c_str());
 }
@@ -114,9 +121,12 @@ void WiFiThing::setHostname(const char* hostname) {
 void WiFiThing::begin(const char* ssid, const char *passphrase) {
   console.begin();
   console.debugln("Begining setupWifi()");
-  console.debugf("MAC address: %s\n", getMacAddress().c_str());
 
+  console.debugf("MAC address: %s\n", getMacAddress().c_str());
   WiFi.mode(WIFI_STA);
+
+//  WiFi.mode(WIFI_STA);
+//  WiFi.setSleepMode(WIFI_NONE_SLEEP);
 
   if (ssid != nullptr) {
     WiFi.begin(ssid, passphrase);
@@ -131,18 +141,38 @@ void WiFiThing::begin(const char* ssid, const char *passphrase) {
   // No authentication by default
   // ArduinoOTA.setPassword((const char *)"123");
 
-  // Port defaults to 8266
-  ArduinoOTA.setPort(8266);
+  // Port defaults to 8266 for esp8266, 3232 for esp32
+  //  ArduinoOTA.setPort(8266);
+  // ArduinoOTA.setPort(3232);
+
+  if (_hostname.length()) {
+    ArduinoOTA.setHostname(_hostname.c_str());
+  }
 
   ArduinoOTA.onStart([]() {
+#if defined(ESP32)
+    String type;
+    if (ArduinoOTA.getCommand() == U_FLASH)
+      type = "sketch";
+    else // U_SPIFFS
+      type = "filesystem";
+
+    // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
+    console.debugf("Start updating %s\n", type.c_str());
+
+#else
     console.debugln("Start");
+#endif
   });
+
   ArduinoOTA.onEnd([]() {
     console.debugln("\nEnd");
   });
+
   ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
     console.debugf("Progress: %u%%\r", (progress / (total / 100)));
   });
+
   ArduinoOTA.onError([](ota_error_t error) {
     console.debugf("Error[%u]: ", error);
     if (error == OTA_AUTH_ERROR) console.debugln("Auth Failed");
@@ -151,13 +181,15 @@ void WiFiThing::begin(const char* ssid, const char *passphrase) {
     else if (error == OTA_RECEIVE_ERROR) console.debugln("Receive Failed");
     else if (error == OTA_END_ERROR) console.debugln("End Failed");
   });
+
   ArduinoOTA.begin();
+
   beginServer();
 }
 
-void WiFiThing::loop() {
+void WiFiThing::idle() {
 
-  console.loop();
+  console.idle();
 
   bool wasUp = networkUp;
   networkUp = WiFi.isConnected();
@@ -207,9 +239,14 @@ String WiFiThing::getHostname() {
 }
 
 String WiFiThing::getMacAddress() {
+  WiFi.mode(WIFI_STA);
   return WiFi.macAddress();
 }
 
 String WiFiThing::getIPAddress() {
   return WiFi.localIP().toString();
+}
+
+void WiFiThing::setTimezone(Timezone* local) {
+  ntpClock.setZone(local);
 }

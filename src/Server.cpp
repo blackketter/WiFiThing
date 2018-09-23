@@ -1,7 +1,13 @@
 #include "WiFiThing.h"
 #include "PString.h"
 
-ESP8266WebServer server ( 80 );
+#ifdef ESP8266
+ESP8266WebServer server(80);
+#endif
+
+#ifdef ESP32
+WebServer server(80);
+#endif
 
 // default request handlers
 void handleRoot() {
@@ -12,7 +18,7 @@ void handleRoot() {
   t.printf(
 "<html>\
   <head>\
-    <meta http-equiv='refresh' content='5'/>\
+    <meta http-equiv='refresh' content='60'/>\
     <title>ESP8266 Demo</title>\
     <style>\
       body { background-color: #cccccc; font-family: Arial, Helvetica, Sans-Serif; Color: #000088; }\
@@ -65,18 +71,82 @@ void drawGraph() {
 
 void debugLog() {
   PString log;
-  console.printLog(log);
+  console.printLog(&log);
   server.send(200, "text/plain", log);
+}
+
+String getCommandLine() {
+  String p;
+  String cmd;
+  // build a command line from http://host/command.txt?cmd=COMMAND&p1=PARAM1&p2=PARAM2&p3=PARAM3
+  if (server.args() >= 1) {
+    cmd = server.arg("cmd");
+    if (cmd) {
+        p = server.arg("p1");
+        if (p) {
+          cmd += " " + p;
+        }
+        p = server.arg("p2");
+        if (p) {
+          cmd += " " + p;
+        }
+        p = server.arg("p3");
+        if (p) {
+          cmd += " " + p;
+        }
+    }
+  }
+  return cmd;
+}
+
+void runCommandHTML() {
+  String commandLine = getCommandLine();
+  PString output;
+
+  // add header with command line field
+  output +=
+"<html>\
+ <head>\
+ <style>\
+  body { background-color: #cccccc; font-family: Arial, Helvetica, Sans-Serif; Color: #000088; }\
+ </style>\
+ <title>Command</title></head>\
+ <body>\
+";
+
+  output += "<pre>";
+
+  // add results
+  console.executeCommandLine(&output,commandLine.c_str());
+
+  // add footer
+  output +=
+"</pre>\
+<form action=\"/command.html\" method=\"GET\"><input type=\"text\" autofocus name=\"cmd\" size=\"100\"><input type=\"submit\" value=\"run\" name=\"Run\"></form>\
+</body></html>\
+";
+  server.send(200, "text/html", output);
+}
+
+void runCommand() {
+  String commandLine = getCommandLine();
+  if (commandLine && commandLine.length()) {
+    PString output;
+    console.executeCommandLine(&output,commandLine.c_str());
+    server.send(200, "text/plain", output);
+  }
 }
 
 // server setup
 void WiFiThing::beginServer() {
   console.debugln("Starting web server...");
   // examples: todo -replace
-  server.on ( "/", handleRoot );
-  server.on ( "/test.svg", drawGraph );
-  server.on ( "/inline", []() {
-    server.send ( 200, "text/plain", "this works as well" );
+  server.on( "/", handleRoot );
+  server.on( "/test.svg", drawGraph );
+  server.on( "/command.txt", runCommand );
+  server.on( "/command.html", runCommandHTML );
+  server.on( "/inline", []() {
+  server.send ( 200, "text/plain", "this works as well" );
   } );
 
   server.on(  "/log.txt", debugLog);
