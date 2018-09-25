@@ -15,7 +15,7 @@ extern ESP8266WebServer server;
 
 #ifdef ESP32
 #include <WiFi.h>
-#include <mDNS.h>
+#include <ESPmDNS.h>
 #include <HTTPClient.h>
 #include <WebServer.h>
 extern WebServer server;
