@@ -1,14 +1,3 @@
-#ifdef ARDUINO_ARCH_ESP8266
-#include <ESP8266WiFi.h>
-#include <ESP8266mDNS.h>
-#include <ESP8266HTTPClient.h>
-#include <ESP8266WebServer.h>
-#else
-#include <WiFi.h>
-#include <mDNS.h>
-#include <HTTPClient.h>
-#include <WebServer.h>
-#endif
 
 #include <NTPClient.h>
 #include <WiFiUdp.h>
