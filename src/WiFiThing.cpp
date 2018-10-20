@@ -22,16 +22,18 @@ class InfoCommand : public Command {
     const char* getName() { return "info"; }
     const char* getHelp() { return "Print System Info"; }
     void execute(Stream* c, uint8_t paramCount, char** params) {
-      c->println("----------------------------------");
       c->println("System Info:");
       c->printf("  wifi:        %s\n", WiFi.isConnected() ? "connected" : "disconnected");
       c->printf("  hostname:    %s\n", ArduinoOTA.getHostname().c_str());
       c->printf("  mac address: %s\n", WiFi.macAddress().c_str());
       c->printf("  ip address:  %s\n", WiFi.localIP().toString().c_str());
-      c->printf("  date:        %02d:%02d:%02d %04d-%02d-%02d\n", ntpClock.hour(), ntpClock.minute(), ntpClock.second(), ntpClock.year(), ntpClock.month(), ntpClock.day());
+      if (WiFi.isConnected()) {
+        String bssid = WiFi.BSSIDstr();
+        c->printf("  BSSID:       %s\n", bssid.c_str());
+      }
+      c->printf("  date:        %02d:%02d:%02d.%01d %04d-%02d-%02d\n", ntpClock.hour(), ntpClock.minute(), ntpClock.second(), ntpClock.fracMillis()/100, ntpClock.year(), ntpClock.month(), ntpClock.day());
       c->printf("  uptime:      %d\n", (int)(millis()/1000));
       c->printf("  free heap:   %d\n", ESP.getFreeHeap());
-      c->println("----------------------------------");
     }
 };
 InfoCommand theInfoCommand;
@@ -97,6 +99,9 @@ void ntpUpdateCallback(NTPClient* n) {
 
   ntpClock.setMillis(now);
   ntpClock.setZone(oldZone);
+
+  timeClient.setRetryInterval(60000);  // TODO: in the case of future DNS failure, which blocks for 5 seconds
+
 }
 
 void WiFiThing::setHostname(const char* hostname) {
