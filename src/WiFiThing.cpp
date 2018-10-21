@@ -119,8 +119,11 @@ void WiFiThing::begin(const char* ssid, const char *passphrase) {
   console.debugf("MAC address: %s\n", getMacAddress().c_str());
   WiFi.mode(WIFI_STA);
 
-//  WiFi.mode(WIFI_STA);
-//  WiFi.setSleepMode(WIFI_NONE_SLEEP);
+#if defined(ESP32)
+  WiFi.setSleep(false);
+#endif
+
+  //WiFi.setSleepMode(WIFI_NONE_SLEEP);
 
   if (ssid != nullptr) {
     WiFi.begin(ssid, passphrase);
@@ -182,6 +185,12 @@ void WiFiThing::begin(const char* ssid, const char *passphrase) {
 }
 
 void WiFiThing::idle() {
+  millis_t nowIdle = millis();
+
+  if (nowIdle - _lastIdle < _minIdle) {
+      delay(10);  // TODO: if I don't include this, the wifi disconnects.  delay(1) doesn't work, nor does yield()  wierd
+  }
+  _lastIdle = nowIdle;
 
   console.idle();
 
