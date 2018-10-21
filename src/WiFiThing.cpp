@@ -23,17 +23,17 @@ class InfoCommand : public Command {
     const char* getHelp() { return "Print System Info"; }
     void execute(Stream* c, uint8_t paramCount, char** params) {
       c->println("System Info:");
-      c->printf("  wifi:        %s\n", WiFi.isConnected() ? "connected" : "disconnected");
-      c->printf("  hostname:    %s\n", ArduinoOTA.getHostname().c_str());
-      c->printf("  mac address: %s\n", WiFi.macAddress().c_str());
-      c->printf("  ip address:  %s\n", WiFi.localIP().toString().c_str());
+      c->printf("  WiFi:        %s\n", WiFi.isConnected() ? "connected" : "disconnected");
+      c->printf("  Hostname:    %s\n", ArduinoOTA.getHostname().c_str());
+      c->printf("  MAC Address: %s\n", WiFi.macAddress().c_str());
+      c->printf("  IP Address:  %s\n", WiFi.localIP().toString().c_str());
       if (WiFi.isConnected()) {
         String bssid = WiFi.BSSIDstr();
         c->printf("  BSSID:       %s\n", bssid.c_str());
       }
-      c->printf("  date:        %02d:%02d:%02d.%01d %04d-%02d-%02d\n", ntpClock.hour(), ntpClock.minute(), ntpClock.second(), ntpClock.fracMillis()/100, ntpClock.year(), ntpClock.month(), ntpClock.day());
-      c->printf("  uptime:      %d\n", (int)(millis()/1000));
-      c->printf("  free heap:   %d\n", ESP.getFreeHeap());
+      c->printf("  Date:        %02d:%02d:%02d.%01d %04d-%02d-%02d\n", ntpClock.hour(), ntpClock.minute(), ntpClock.second(), ntpClock.fracMillis()/100, ntpClock.year(), ntpClock.month(), ntpClock.day());
+      c->printf("  Uptime:      %d\n", (int)(millis()/1000));
+      c->printf("  Free Heap:   %d\n", ESP.getFreeHeap());
     }
 };
 InfoCommand theInfoCommand;
