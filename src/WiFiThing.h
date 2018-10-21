@@ -4,6 +4,7 @@
 #include <WiFiConsole.h>
 #include <Timezone.h>
 #include <Timezones.h>
+#include <Clock.h>
 
 #ifdef ESP8266
 #include <ESP8266WiFi.h>
@@ -43,6 +44,8 @@ class WiFiThing {
   private:
     void beginServer();
     String _hostname;
+    millis_t _lastIdle = 0;
+    const millis_t _minIdle = 10;
 };
 
 extern WiFiConsole console;
