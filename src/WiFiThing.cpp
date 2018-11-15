@@ -32,7 +32,7 @@ class InfoCommand : public Command {
         c->printf("  BSSID:       %s\n", bssid.c_str());
       }
       c->printf("  Date:        %02d:%02d:%02d.%01d %04d-%02d-%02d\n", ntpClock.hour(), ntpClock.minute(), ntpClock.second(), ntpClock.fracMillis()/100, ntpClock.year(), ntpClock.month(), ntpClock.day());
-      c->printf("  Uptime:      %d\n", Uptime::seconds());
+      c->printf("  Uptime:      %d\n", (int)Uptime::seconds());
       c->printf("  Free Heap:   %d\n", ESP.getFreeHeap());
     }
 };
