@@ -185,7 +185,7 @@ void WiFiThing::begin(const char* ssid, const char *passphrase) {
 }
 
 void WiFiThing::idle() {
-  millis_t nowIdle = millis();
+  millis_t nowIdle = Uptime::millis();
 
   if (nowIdle - _lastIdle < _minIdle) {
       delay(10);  // TODO: if I don't include this, the wifi disconnects.  delay(1) doesn't work, nor does yield()  wierd
