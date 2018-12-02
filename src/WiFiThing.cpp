@@ -31,8 +31,12 @@ class InfoCommand : public Command {
         String bssid = WiFi.BSSIDstr();
         c->printf("  BSSID:       %s\n", bssid.c_str());
       }
-      c->printf("  Date:        %02d:%02d:%02d.%01d %04d-%02d-%02d\n", ntpClock.hour(), ntpClock.minute(), ntpClock.second(), ntpClock.fracMillis()/100, ntpClock.year(), ntpClock.month(), ntpClock.day());
-      c->printf("  Uptime:      %d\n", (int)Uptime::seconds());
+      c->printf("  Date:        %04d-%02d-%02d %02d:%02d:%02d.%01d\n", ntpClock.year(), ntpClock.month(), ntpClock.day(), ntpClock.hour(), ntpClock.minute(), ntpClock.second(), ntpClock.fracMillis()/100);
+
+      c->print("  Uptime:      ");
+      Uptime::longTime(*c);
+      c->println();
+
       c->printf("  Free Heap:   %d\n", ESP.getFreeHeap());
     }
 };
@@ -47,7 +51,7 @@ class RebootCommand : public Command {
       c->println("Rebooting now...");
       console.stop();
       delay(1000);
-      ESP.restart();
+      WiFiThing::reboot();
     }
 };
 RebootCommand theRebootCommand;

@@ -41,6 +41,9 @@ class WiFiThing {
     int32_t httpGet(const char* url);
 
     void setTimezone(Timezone* localZone);
+
+    static void reboot() { ESP.restart(); };
+
   private:
     void beginServer();
     String _hostname;
