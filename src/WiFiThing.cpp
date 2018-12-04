@@ -6,6 +6,14 @@
 
 #include "WiFiThing.h"
 
+#if defined(ESP32)
+#include <esp_task_wdt.h>
+#endif
+
+void resetWatchdog();
+void beginWatchdog();
+const uint32_t watchdogTimeout = 5;  // seconds
+
 // By default 'time.nist.gov' is used with 60 seconds update interval and
 // no offset
 WiFiUDP ntpUDP;
@@ -172,6 +180,7 @@ void WiFiThing::begin(const char* ssid, const char *passphrase) {
 
   ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
     console.debugf("Progress: %u%%\r", (progress / (total / 100)));
+    resetWatchdog();
   });
 
   ArduinoOTA.onError([](ota_error_t error) {
@@ -186,6 +195,7 @@ void WiFiThing::begin(const char* ssid, const char *passphrase) {
   ArduinoOTA.begin();
 
   beginServer();
+  beginWatchdog();
 }
 
 void WiFiThing::idle() {
@@ -214,6 +224,38 @@ void WiFiThing::idle() {
     timeClient.update();
   }
   server.handleClient();
+  resetWatchdog();
+}
+
+void resetWatchdog() {
+#ifdef ESP32
+  esp_task_wdt_reset();
+#endif
+}
+
+void beginWatchdog() {
+#ifdef ESP32
+  esp_task_wdt_init(watchdogTimeout, true);
+
+  esp_err_t err = esp_task_wdt_add(NULL);
+  switch (err) {
+    case ESP_OK:
+      console.debugf("Watchdog activated OK (timeout is %d seconds)\n", watchdogTimeout);
+      break;
+    case ESP_ERR_INVALID_ARG:
+      console.debugln("Watchdog activation error: invalid argument");
+      break;
+    case ESP_ERR_NO_MEM:
+      console.debugln("Watchdog activation error: insufficent memory");
+      break;
+    case ESP_ERR_INVALID_STATE:
+      console.debugln("Watchdog activation error: not initialized yet");
+      break;
+    default:
+      console.debugf("Watchdog activation error: %d\n", err);
+      break;
+  }
+#endif
 }
 
 int32_t WiFiThing::httpGet(const char* url) {
