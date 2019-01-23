@@ -31,10 +31,10 @@ class InfoCommand : public Command {
     const char* getHelp() { return "Print System Info"; }
     void execute(Stream* c, uint8_t paramCount, char** params) {
       c->println("System Info:");
-      c->printf("  WiFi:        %s\n", WiFi.isConnected() ? "connected" : "disconnected");
-      c->printf("  Hostname:    %s\n", ArduinoOTA.getHostname().c_str());
+      c->printf("  Hostname:    %s.local\n", ArduinoOTA.getHostname().c_str());
       c->printf("  MAC Address: %s\n", WiFi.macAddress().c_str());
       c->printf("  IP Address:  %s\n", WiFi.localIP().toString().c_str());
+      c->printf("  WiFi:        %s\n", WiFi.isConnected() ? "connected" : "disconnected");
       if (WiFi.isConnected()) {
         String bssid = WiFi.BSSIDstr();
         c->printf("  BSSID:       %s\n", bssid.c_str());
