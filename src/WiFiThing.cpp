@@ -10,6 +10,8 @@
 #include <esp_task_wdt.h>
 #endif
 
+String WiFiThing::_hostname;
+
 void resetWatchdog();
 void beginWatchdog();
 const uint32_t watchdogTimeout = 5;  // seconds
@@ -57,7 +59,7 @@ class RebootCommand : public Command {
     const char* getHelp() { return "Reboot system"; }
     void execute(Stream* c, uint8_t paramCount, char** params) {
       c->println("Rebooting now...");
-      console.stop();
+      console.close();
       delay(1000);
       WiFiThing::reboot();
     }
@@ -85,7 +87,7 @@ class ExitCommand : public Command {
     const char* getHelp() { return "Close console connection"; }
     void execute(Stream* c, uint8_t paramCount, char** params) {
       c->println("Goodbye!");
-      console.stop();
+      console.close();
     }
 };
 ExitCommand theExitCommand;
@@ -119,6 +121,13 @@ void ntpUpdateCallback(NTPClient* n) {
 void WiFiThing::setHostname(const char* hostname) {
   if (hostname) {
     ArduinoOTA.setHostname(hostname);
+
+#if defined(ESP32)
+    WiFi.setHostname(hostname);
+#else
+    WiFi.hostname(hostname);
+#endif
+
     _hostname = hostname;
   }
   console.debugf("Hostname: %s\n", getHostname().c_str());
@@ -284,7 +293,7 @@ int32_t WiFiThing::httpGet(const char* url) {
 }
 
 String WiFiThing::getHostname() {
-  return ArduinoOTA.getHostname();
+  return _hostname;
 }
 
 String WiFiThing::getMacAddress() {

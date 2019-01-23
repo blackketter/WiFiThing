@@ -46,7 +46,7 @@ class WiFiThing {
 
   private:
     void beginServer();
-    String _hostname;
+    static String _hostname;
     millis_t _lastIdle = 0;
     const millis_t _minIdle = 10;
 };
