@@ -3,9 +3,7 @@
 
 #ifdef ESP8266
 ESP8266WebServer server(80);
-#endif
-
-#ifdef ESP32
+#else
 WebServer server(80);
 #endif
 
@@ -19,7 +17,7 @@ void handleRoot() {
 "<html>\
   <head>\
     <meta http-equiv='refresh' content='60'/>\
-    <title>ESP8266 Demo</title>\
+    <title>WiFiThing Demo</title>\
     <style>\
       body { background-color: #cccccc; font-family: Arial, Helvetica, Sans-Serif; Color: #000088; }\
     </style>\
