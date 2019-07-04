@@ -6,6 +6,16 @@
 
 #include "WiFiThing.h"
 
+#if defined(ESP32)
+#include <esp_task_wdt.h>
+#endif
+
+String WiFiThing::_hostname;
+
+void resetWatchdog();
+void beginWatchdog();
+const uint32_t watchdogTimeout = 5;  // seconds
+
 // By default 'time.nist.gov' is used with 60 seconds update interval and
 // no offset
 WiFiUDP ntpUDP;
@@ -22,16 +32,22 @@ class InfoCommand : public Command {
     const char* getName() { return "info"; }
     const char* getHelp() { return "Print System Info"; }
     void execute(Stream* c, uint8_t paramCount, char** params) {
-      c->println("----------------------------------");
       c->println("System Info:");
-      c->printf("  wifi:        %s\n", WiFi.isConnected() ? "connected" : "disconnected");
-      c->printf("  hostname:    %s\n", ArduinoOTA.getHostname().c_str());
-      c->printf("  mac address: %s\n", WiFi.macAddress().c_str());
-      c->printf("  ip address:  %s\n", WiFi.localIP().toString().c_str());
-      c->printf("  date:        %02d:%02d:%02d %04d-%02d-%02d\n", ntpClock.hour(), ntpClock.minute(), ntpClock.second(), ntpClock.year(), ntpClock.month(), ntpClock.day());
-      c->printf("  uptime:      %d\n", (int)(millis()/1000));
-      c->printf("  free heap:   %d\n", ESP.getFreeHeap());
-      c->println("----------------------------------");
+      c->printf("  Hostname:    %s.local\n", ArduinoOTA.getHostname().c_str());
+      c->printf("  MAC Address: %s\n", WiFi.macAddress().c_str());
+      c->printf("  IP Address:  %s\n", WiFi.localIP().toString().c_str());
+      c->printf("  WiFi:        %s\n", WiFi.isConnected() ? "connected" : "disconnected");
+      if (WiFi.isConnected()) {
+        String bssid = WiFi.BSSIDstr();
+        c->printf("  BSSID:       %s\n", bssid.c_str());
+      }
+      c->printf("  Date:        %04d-%02d-%02d %02d:%02d:%02d.%01d\n", ntpClock.year(), ntpClock.month(), ntpClock.day(), ntpClock.hour(), ntpClock.minute(), ntpClock.second(), ntpClock.fracMillis()/100);
+
+      c->print("  Uptime:      ");
+      Uptime::longTime(*c);
+      c->println();
+
+      c->printf("  Free Heap:   %d\n", ESP.getFreeHeap());
     }
 };
 InfoCommand theInfoCommand;
@@ -43,9 +59,9 @@ class RebootCommand : public Command {
     const char* getHelp() { return "Reboot system"; }
     void execute(Stream* c, uint8_t paramCount, char** params) {
       c->println("Rebooting now...");
-      console.stop();
+      console.close();
       delay(1000);
-      ESP.restart();
+      WiFiThing::reboot();
     }
 };
 RebootCommand theRebootCommand;
@@ -71,7 +87,7 @@ class ExitCommand : public Command {
     const char* getHelp() { return "Close console connection"; }
     void execute(Stream* c, uint8_t paramCount, char** params) {
       c->println("Goodbye!");
-      console.stop();
+      console.close();
     }
 };
 ExitCommand theExitCommand;
@@ -97,11 +113,21 @@ void ntpUpdateCallback(NTPClient* n) {
 
   ntpClock.setMillis(now);
   ntpClock.setZone(oldZone);
+
+  timeClient.setRetryInterval(60000);  // TODO: in the case of future DNS failure, which blocks for 5 seconds
+
 }
 
 void WiFiThing::setHostname(const char* hostname) {
   if (hostname) {
     ArduinoOTA.setHostname(hostname);
+
+#if defined(ESP32)
+    WiFi.setHostname(hostname);
+#else
+    WiFi.hostname(hostname);
+#endif
+
     _hostname = hostname;
   }
   console.debugf("Hostname: %s\n", getHostname().c_str());
@@ -114,8 +140,11 @@ void WiFiThing::begin(const char* ssid, const char *passphrase) {
   console.debugf("MAC address: %s\n", getMacAddress().c_str());
   WiFi.mode(WIFI_STA);
 
-//  WiFi.mode(WIFI_STA);
-//  WiFi.setSleepMode(WIFI_NONE_SLEEP);
+#if defined(ESP32)
+  WiFi.setSleep(false);
+#endif
+
+  //WiFi.setSleepMode(WIFI_NONE_SLEEP);
 
   if (ssid != nullptr) {
     WiFi.begin(ssid, passphrase);
@@ -160,6 +189,7 @@ void WiFiThing::begin(const char* ssid, const char *passphrase) {
 
   ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
     console.debugf("Progress: %u%%\r", (progress / (total / 100)));
+    resetWatchdog();
   });
 
   ArduinoOTA.onError([](ota_error_t error) {
@@ -174,9 +204,16 @@ void WiFiThing::begin(const char* ssid, const char *passphrase) {
   ArduinoOTA.begin();
 
   beginServer();
+  beginWatchdog();
 }
 
 void WiFiThing::idle() {
+  millis_t nowIdle = Uptime::millis();
+
+  if (nowIdle - _lastIdle < _minIdle) {
+      delay(10);  // TODO: if I don't include this, the wifi disconnects.  delay(1) doesn't work, nor does yield()  wierd
+  }
+  _lastIdle = nowIdle;
 
   console.idle();
 
@@ -196,6 +233,38 @@ void WiFiThing::idle() {
     timeClient.update();
   }
   server.handleClient();
+  resetWatchdog();
+}
+
+void resetWatchdog() {
+#ifdef ESP32
+  esp_task_wdt_reset();
+#endif
+}
+
+void beginWatchdog() {
+#ifdef ESP32
+  esp_task_wdt_init(watchdogTimeout, true);
+
+  esp_err_t err = esp_task_wdt_add(NULL);
+  switch (err) {
+    case ESP_OK:
+      console.debugf("Watchdog activated OK (timeout is %d seconds)\n", watchdogTimeout);
+      break;
+    case ESP_ERR_INVALID_ARG:
+      console.debugln("Watchdog activation error: invalid argument");
+      break;
+    case ESP_ERR_NO_MEM:
+      console.debugln("Watchdog activation error: insufficent memory");
+      break;
+    case ESP_ERR_INVALID_STATE:
+      console.debugln("Watchdog activation error: not initialized yet");
+      break;
+    default:
+      console.debugf("Watchdog activation error: %d\n", err);
+      break;
+  }
+#endif
 }
 
 int32_t WiFiThing::httpGet(const char* url) {
@@ -224,7 +293,7 @@ int32_t WiFiThing::httpGet(const char* url) {
 }
 
 String WiFiThing::getHostname() {
-  return ArduinoOTA.getHostname();
+  return _hostname;
 }
 
 String WiFiThing::getMacAddress() {

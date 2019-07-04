@@ -4,6 +4,7 @@
 #include <WiFiConsole.h>
 #include <Timezone.h>
 #include <Timezones.h>
+#include <Clock.h>
 
 #ifdef ESP8266
 #include <ESP8266WiFi.h>
@@ -13,7 +14,7 @@
 extern ESP8266WebServer server;
 #else
 #include <WiFi.h>
-#include <mDNS.h>
+#include <ESPmDNS.h>
 #include <HTTPClient.h>
 #include <WebServer.h>
 extern WebServer server;
@@ -38,9 +39,14 @@ class WiFiThing {
     int32_t httpGet(const char* url);
 
     void setTimezone(Timezone* localZone);
+
+    static void reboot() { ESP.restart(); };
+
   private:
     void beginServer();
-    String _hostname;
+    static String _hostname;
+    millis_t _lastIdle = 0;
+    const millis_t _minIdle = 10;
 };
 
 extern WiFiConsole console;
