@@ -4,10 +4,12 @@
 #include <ArduinoOTA.h>
 #include <Clock.h>
 
+
 #include "WiFiThing.h"
 
 #if defined(ESP32)
 #include <esp_task_wdt.h>
+#include "esp_wifi.h"
 #endif
 
 String WiFiThing::_hostname;
@@ -26,31 +28,6 @@ WiFiConsole console;
 Clock ntpClock;
 
 bool networkUp = false;
-
-class InfoCommand : public Command {
-  public:
-    const char* getName() { return "info"; }
-    const char* getHelp() { return "Print System Info"; }
-    void execute(Stream* c, uint8_t paramCount, char** params) {
-      c->println("System Info:");
-      c->printf("  Hostname:    %s.local\n", ArduinoOTA.getHostname().c_str());
-      c->printf("  MAC Address: %s\n", WiFi.macAddress().c_str());
-      c->printf("  IP Address:  %s\n", WiFi.localIP().toString().c_str());
-      c->printf("  WiFi:        %s\n", WiFi.isConnected() ? "connected" : "disconnected");
-      if (WiFi.isConnected()) {
-        String bssid = WiFi.BSSIDstr();
-        c->printf("  BSSID:       %s\n", bssid.c_str());
-      }
-      c->printf("  Date:        %04d-%02d-%02d %02d:%02d:%02d.%01d\n", ntpClock.year(), ntpClock.month(), ntpClock.day(), ntpClock.hour(), ntpClock.minute(), ntpClock.second(), ntpClock.fracMillis()/100);
-
-      c->print("  Uptime:      ");
-      Uptime::longTime(*c);
-      c->println();
-
-      c->printf("  Free Heap:   %d\n", ESP.getFreeHeap());
-    }
-};
-InfoCommand theInfoCommand;
 
 // reboot command
 class RebootCommand : public Command {
@@ -75,6 +52,14 @@ class WiFiCommand : public Command {
       c->println("----------------------------------");
       c->println("WiFi Info");
       WiFi.printDiag(*c);
+      c->printf("  Hostname:    %s.local\n", ArduinoOTA.getHostname().c_str());
+      c->printf("  MAC Address: %s\n", WiFi.macAddress().c_str());
+      c->printf("  IP Address:  %s\n", WiFi.localIP().toString().c_str());
+      c->printf("  WiFi:        %s\n", WiFi.isConnected() ? "connected" : "disconnected");
+      if (WiFi.isConnected()) {
+        String bssid = WiFi.BSSIDstr();
+        c->printf("  BSSID:       %s\n", bssid.c_str());
+      }
       c->println("----------------------------------");
     }
 };
@@ -138,13 +123,17 @@ void WiFiThing::begin(const char* ssid, const char *passphrase) {
   console.debugln("Begining setupWifi()");
 
   console.debugf("MAC address: %s\n", getMacAddress().c_str());
+
+#if defined(ESP32)
+  // turn off power conservation
+  esp_wifi_set_ps (WIFI_PS_NONE);
+#endif
+
   WiFi.mode(WIFI_STA);
 
 #if defined(ESP32)
   WiFi.setSleep(false);
 #endif
-
-  //WiFi.setSleepMode(WIFI_NONE_SLEEP);
 
   if (ssid != nullptr) {
     WiFi.begin(ssid, passphrase);
