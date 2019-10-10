@@ -12,7 +12,9 @@
 #include <ESP8266HTTPClient.h>
 #include <ESP8266WebServer.h>
 extern ESP8266WebServer server;
-#else
+#endif
+
+#if defined(ESP32)
 #include <WiFi.h>
 #include <ESPmDNS.h>
 #include <HTTPClient.h>
@@ -40,7 +42,7 @@ class WiFiThing {
 
     void setTimezone(Timezone* localZone);
 
-    static void reboot() { ESP.restart(); };
+    static void reboot();
 
   private:
     void beginServer();

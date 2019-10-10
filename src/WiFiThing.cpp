@@ -1,6 +1,4 @@
-
 #include <NTPClient.h>
-#include <WiFiUdp.h>
 #include <ArduinoOTA.h>
 #include <Clock.h>
 
@@ -149,7 +147,7 @@ void WiFiThing::begin(const char* ssid, const char *passphrase) {
   // ArduinoOTA.setPassword((const char *)"123");
 
   // Port defaults to 8266 for esp8266, 3232 for esp32
-  //  ArduinoOTA.setPort(8266);
+  // ArduinoOTA.setPort(8266);
   // ArduinoOTA.setPort(3232);
 
   if (_hostname.length()) {
@@ -297,3 +295,10 @@ String WiFiThing::getIPAddress() {
 void WiFiThing::setTimezone(Timezone* local) {
   ntpClock.setZone(local);
 }
+
+void WiFiThing::reboot() {
+#if defined(ESP32) || defined(ESP8266)
+  ESP.restart();
+#endif
+};
+
