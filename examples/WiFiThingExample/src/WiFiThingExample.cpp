@@ -10,13 +10,10 @@ WiFiThing thing;
 
 
 void setup() {
-  delay(1000);
   thing.begin(ssid, passphrase);
-
 }
 
 
 void loop(void) {
-
-   thing.idle();
+  thing.idle();
 }

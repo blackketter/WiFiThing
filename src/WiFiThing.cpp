@@ -32,7 +32,7 @@ class RebootCommand : public Command {
   public:
     const char* getName() { return "reboot"; }
     const char* getHelp() { return "Reboot system"; }
-    void execute(Stream* c, uint8_t paramCount, char** params) {
+    void execute(Console* c, uint8_t paramCount, char** params) {
       c->println("Rebooting now...");
       console.close();
       delay(1000);
@@ -46,7 +46,7 @@ class WiFiCommand : public Command {
   public:
     const char* getName() { return "wifi"; }
     const char* getHelp() { return "Print WiFi Info"; }
-    void execute(Stream* c, uint8_t paramCount, char** params) {
+    void execute(Console* c, uint8_t paramCount, char** params) {
       c->println("----------------------------------");
       c->println("WiFi Info");
       WiFi.printDiag(*c);
@@ -68,7 +68,7 @@ class ExitCommand : public Command {
   public:
     const char* getName() { return "exit"; }
     const char* getHelp() { return "Close console connection"; }
-    void execute(Stream* c, uint8_t paramCount, char** params) {
+    void execute(Console* c, uint8_t paramCount, char** params) {
       c->println("Goodbye!");
       console.close();
     }
@@ -117,10 +117,6 @@ void WiFiThing::setHostname(const char* hostname) {
 }
 
 void WiFiThing::begin(const char* ssid, const char *passphrase) {
-  console.begin();
-  console.debugln("Begining setupWifi()");
-
-  console.debugf("MAC address: %s\n", getMacAddress().c_str());
 
 #if defined(ESP32)
   // turn off power conservation
@@ -138,6 +134,11 @@ void WiFiThing::begin(const char* ssid, const char *passphrase) {
   } else {
     WiFi.begin();
   }
+
+  console.begin();
+  console.debugln("Begining setupWifi()");
+
+  console.debugf("MAC address: %s\n", getMacAddress().c_str());
 
   timeClient.setUpdateCallback(ntpUpdateCallback);
   timeClient.begin();
