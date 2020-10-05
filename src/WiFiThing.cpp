@@ -117,6 +117,10 @@ void WiFiThing::setHostname(const char* hostname) {
 }
 
 void WiFiThing::begin(const char* ssid, const char *passphrase) {
+  console.begin();
+  console.debugln("Begining setupWifi()");
+
+  console.debugf("MAC address: %s\n", getMacAddress().c_str());
 
 #if defined(ESP32)
   // turn off power conservation
@@ -134,11 +138,6 @@ void WiFiThing::begin(const char* ssid, const char *passphrase) {
   } else {
     WiFi.begin();
   }
-
-  console.begin();
-  console.debugln("Begining setupWifi()");
-
-  console.debugf("MAC address: %s\n", getMacAddress().c_str());
 
   timeClient.setUpdateCallback(ntpUpdateCallback);
   timeClient.begin();
