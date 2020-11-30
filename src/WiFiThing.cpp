@@ -293,6 +293,7 @@ String WiFiThing::getIPAddress() {
 }
 
 void WiFiThing::setTimezone(Timezone* local) {
+  LocalTime::setSystemTimezone(local);
   ntpClock.setZone(local);
 }
 
