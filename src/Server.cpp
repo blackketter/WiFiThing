@@ -31,7 +31,7 @@ void handleRoot() {
     WiFiThing::getHostname().c_str(),
     hr, min % 60, sec % 60
   );
-  server.send ( 200, "text/html", t );
+  server.send ( 200, "text/html", t.c_str() );
 }
 
 void handleNotFound() {
@@ -64,13 +64,13 @@ void drawGraph() {
   }
   out += "</g>\n</svg>\n";
 
-  server.send ( 200, "image/svg+xml", out);
+  server.send ( 200, "image/svg+xml", out.c_str());
 }
 
 void debugLog() {
   PString log;
   console.printLog(&log);
-  server.send(200, "text/plain", log);
+  server.send(200, "text/plain", log.c_str());
 }
 
 String getCommandLine() {
@@ -123,7 +123,7 @@ void runCommandHTML() {
 <form action=\"/command.html\" method=\"GET\"><input type=\"text\" autofocus name=\"cmd\" size=\"100\"><input type=\"submit\" value=\"run\" name=\"Run\"></form>\
 </body></html>\
 ";
-  server.send(200, "text/html", output);
+  server.send(200, "text/html", output.c_str());
 }
 
 void runCommand() {
@@ -131,7 +131,7 @@ void runCommand() {
   if (commandLine && commandLine.length()) {
     PString output;
     console.executeCommandLine(&output,commandLine.c_str());
-    server.send(200, "text/plain", output);
+    server.send(200, "text/plain", output.c_str());
   }
 }
 

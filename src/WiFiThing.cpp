@@ -259,7 +259,7 @@ int32_t WiFiThing::httpGet(const char* url) {
 
     HTTPClient http;
 
-    http.begin(url); //HTTP
+    http.begin(_client, url); //HTTP
 
     int httpCode = http.GET();
 

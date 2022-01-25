@@ -22,6 +22,8 @@ extern ESP8266WebServer server;
 extern WebServer server;
 #endif
 
+extern WiFiClient _client;
+
 class WiFiThing {
   public:
     // call wifithing.begin() in your arduino setup().
