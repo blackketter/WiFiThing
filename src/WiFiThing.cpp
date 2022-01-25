@@ -14,6 +14,9 @@ String WiFiThing::_hostname;
 
 void resetWatchdog();
 void beginWatchdog();
+void pauseWatchdog();
+void resumeWatchdog();
+
 const uint32_t watchdogTimeout = 5;  // seconds
 
 // By default 'time.nist.gov' is used with 60 seconds update interval and
@@ -58,10 +61,49 @@ class WiFiCommand : public Command {
         String bssid = WiFi.BSSIDstr();
         c->printf("  BSSID:       %s\n", bssid.c_str());
       }
+      
       c->println("----------------------------------");
     }
 };
 WiFiCommand theWiFiCommand;
+
+// wifi scan command
+class WiFiScanCommand : public Command {
+  public:
+    const char* getName() { return "scan"; }
+    const char* getHelp() { return "Scan WiFi Networks"; }
+    void execute(Console* c, uint8_t paramCount, char** params) {
+       c->println("  Scanning networks... (takes several seconds)");
+      // TODO: Make this async
+      pauseWatchdog();
+      int n = WiFi.scanNetworks();
+      if (n == 0) {
+          c->println("     No networks found!");
+      } else {
+          c->printf("    %d networks found:\n",n);
+          for (int i = 0; i < n; ++i) {
+              // Print SSID and RSSI for each network found
+              c->print("    ");
+              c->print(i + 1);
+              c->print(": ");
+              c->print(WiFi.SSID(i));
+              c->print(" (");
+              c->print(WiFi.RSSI(i));
+              c->print(")");
+              c->println((WiFi.encryptionType(i) == 
+#ifdef ESP32
+    WIFI_AUTH_OPEN
+#else
+    ENC_TYPE_NONE
+#endif
+                  )?" ":"*");
+          }
+      }
+      resumeWatchdog();
+    }
+};
+WiFiScanCommand theWiFiScanCommand;
+
 
 // exit console command
 class ExitCommand : public Command {
@@ -117,6 +159,10 @@ void WiFiThing::setHostname(const char* hostname) {
 }
 
 void WiFiThing::begin(const char* ssid, const char *passphrase) {
+  console.begin();
+  console.debugln("Begining setupWifi()");
+
+  console.debugf("MAC address: %s\n", getMacAddress().c_str());
 
 #if defined(ESP32)
   // turn off power conservation
@@ -130,15 +176,12 @@ void WiFiThing::begin(const char* ssid, const char *passphrase) {
 #endif
 
   if (ssid != nullptr) {
+    console.debugf("WiFi.begin connecting to SSID: %s\n", ssid);
     WiFi.begin(ssid, passphrase);
   } else {
+    console.debugln("WiFi begin without SSID!");
     WiFi.begin();
   }
-
-  console.begin();
-  console.debugln("Begining setupWifi()");
-
-  console.debugf("MAC address: %s\n", getMacAddress().c_str());
 
   timeClient.setUpdateCallback(ntpUpdateCallback);
   timeClient.begin();
@@ -255,6 +298,18 @@ void beginWatchdog() {
 #endif
 }
 
+void pauseWatchdog() {
+#ifdef ESP32
+  esp_task_wdt_delete(NULL);
+#endif
+}
+
+void resumeWatchdog() {
+#ifdef ESP32
+esp_task_wdt_add(NULL);
+#endif
+}
+
 int32_t WiFiThing::httpGet(const char* url) {
 
     HTTPClient http;
@@ -294,6 +349,7 @@ String WiFiThing::getIPAddress() {
 }
 
 void WiFiThing::setTimezone(Timezone* local) {
+  LocalTime::setSystemTimezone(local);
   ntpClock.setZone(local);
 }
 
